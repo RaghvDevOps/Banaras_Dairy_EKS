@@ -1,0 +1,14 @@
+# Copy this file to backend.hcl (gitignored) and fill in your own values,
+# OR just run scripts/bootstrap_backend.sh once — it prints a ready-to-use
+# backend.hcl for you automatically.
+#
+#   cp backend.hcl.example backend.hcl
+#
+# Then initialize with:
+#   terraform init -backend-config=backend.hcl
+
+bucket         = "banaras-dairy-eks-tfstate-<YOUR_AWS_ACCOUNT_ID>"
+key            = "eks-poc/terraform.tfstate"
+region         = "ap-south-1"
+dynamodb_table = "banaras-dairy-eks-tf-lock"
+encrypt        = true

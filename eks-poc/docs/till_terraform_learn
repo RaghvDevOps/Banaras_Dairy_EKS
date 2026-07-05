@@ -1,0 +1,183 @@
+Terraform Learning Summary
+Project context: Banaras Dairy app ke liye AWS S3 bucket, IAM policy, IAM user, access key Terraform se create kiya.
+
+Terraform ka purpose samjha:
+
+Infrastructure ko code ke through create/manage karna.
+Manual AWS Console steps ko repeatable .tf files me convert karna.
+Provider concept samjha:
+
+Provider ek plugin/library hota hai jo Terraform ko AWS APIs se baat karna sikhata hai.
+terraform init command provider download karta hai .terraform/ directory me.
+AWS provider source use kiya: hashicorp/aws.
+terraform {} block aur provider "aws" {} block ka difference samjha:
+
+terraform {} block provider source/version define karta hai.
+provider "aws" {} block AWS region/profile define karta hai.
+Region use kiya: ap-south-1.
+Profile use kiya: banaras-dairy-deployer.
+Version pinning samjha:
+
+version = "~> 5.0" ka use kiya.
+Iska matlab AWS provider version 5.x allow hoga, lekin 6.x nahi.
+Reason: future breaking changes se bachna.
+AWS credentials handling samjha:
+
+Hardcoded credentials .tf file me nahi rakhna.
+Local development ke liye named AWS CLI profile use karna best hai.
+CI/CD me environment variables use hote hain.
+AWS production resources pe IAM Role best approach hai.
+HCL syntax samjha:
+
+Terraform me comma nahi lagta.
+String values quotes me hoti hain.
+Resource references quotes ke bina hoti hain.
+Example:
+"banaras-dairy-app" = direct string
+aws_iam_user.user.name = resource reference
+Map vs List samjha:
+
+{} map ke liye hota hai, key-value pair:
+tags = { Project = "BanarasDairy" }
+[] list ke liye hota hai:
+Action = ["s3:PutObject", "s3:GetObject"]
+S3 resource create karna sikha:
+
+resource "aws_s3_bucket" "bills_bucket" use kiya.
+Bucket name: banaras-dairy-bills.
+IAM policy create karna sikha:
+
+aws_iam_policy resource use kiya.
+jsonencode() se IAM policy JSON likhna sikha.
+Least privilege actions use kiye:
+s3:PutObject
+s3:GetObject
+s3:DeleteObject
+S3 ARN difference samjha:
+
+arn:aws:s3:::bucket-name bucket ke liye hota hai.
+arn:aws:s3:::bucket-name/* bucket ke andar objects ke liye hota hai.
+Object operations ke liye /* zaroori hai.
+IAM user create karna sikha:
+
+aws_iam_user resource use kiya.
+User: banaras-dairy-app.
+IAM policy attachment sikha:
+
+aws_iam_user_policy_attachment use kiya.
+Policy ko IAM user se attach kiya.
+Access key Terraform se create karna sikha:
+
+aws_iam_access_key resource use kiya.
+Access Key ID output me dikh sakta hai.
+Secret key sensitive output hota hai.
+Output block samjha:
+
+output block Terraform values terminal me show karne ke liye hota hai.
+Secret output ke liye sensitive = true use kiya.
+Secret nikalne ke liye:
+terraform output -raw app_secret_access_key
+Terraform commands sikhe:
+
+terraform init provider download/init ke liye.
+terraform plan dry run ke liye.
+terraform apply actual AWS resource create/update/delete ke liye.
+terraform plan vs terraform apply samjha:
+
+plan sirf batata hai kya hoga.
+apply actual changes karta hai AWS me.
+State file concept clear hua:
+
+terraform.tfstate Terraform ka memory/notebook hai.
+Terraform resources ko local resource name se track karta hai.
+State file delete karne se Terraform resources bhool jata hai.
+State file delete hone ka impact samjha:
+
+AWS resources delete nahi hote.
+Resources orphan ho jate hain.
+Terraform unko manage nahi kar pata.
+Recovery ke liye terraform import use hota hai.
+.terraform.lock.hcl samjha:
+
+Exact provider version lock karta hai.
+Is file ko Git me commit karna chahiye.
+.terraform/ folder samjha:
+
+Provider binaries store hoti hain.
+Isko Git me commit nahi karna.
+terraform.tfstate.backup samjha:
+
+Previous state ka backup hota hai.
+Isko Git me commit nahi karna.
+.gitignore rule samjha:
+
+Commit nahi karna:
+.terraform/
+terraform.tfstate
+terraform.tfstate.backup
+*.tfvars
+Commit karna:
+.tf files
+.terraform.lock.hcl
+Idempotency samjha:
+
+Agar resource already Terraform state me hai aur .tf me same hai, Terraform usko touch nahi karta.
+Sirf changed resource pe action leta hai.
+Local resource name ka importance samjha:
+
+Terraform AWS resource ko local name se track karta hai.
+Example: aws_s3_bucket.bills_bucket.
+Agar local name change kar diya, Terraform old resource ko deleted aur new resource ko created samjhega.
+Bucket name change behavior samjha:
+
+S3 bucket name immutable hota hai.
+Bucket name change karne par Terraform old bucket destroy karke new bucket create karega.
+Same file me multiple resources banana samjha:
+
+Agar second bucket chahiye, existing resource block edit nahi karna.
+New resource block add karna:
+aws_s3_bucket.bills_bucket
+aws_s3_bucket.photos_bucket
+moved block concept samjha:
+
+Local resource rename karte waqt destroy/create avoid karne ke liye use hota hai.
+Example:
+moved {
+  from = aws_s3_bucket.bills_bucket
+  to   = aws_s3_bucket.new_bills_bucket
+}
+lifecycle block concept samjha:
+
+prevent_destroy = true use karke important resources accidental delete se bachaye ja sakte hain.
+Useful for S3 buckets, RDS, production stateful resources.
+terraform import concept samjha:
+
+Existing AWS resource ko Terraform state me bring karne ke liye use hota hai.
+Useful when resource manually created ho ya state delete ho gaya ho.
+Real-world project structure samjha:
+
+Ek bada demo1.tf chal sakta hai, lekin production me split karna better hai:
+provider.tf
+s3.tf
+iam.tf
+outputs.tf
+variables.tf
+Infrastructure vs application deployment ka difference samjha:
+
+Terraform infrastructure create/manage karta hai.
+CI/CD app deploy karta hai.
+Dono ko usually separate pipeline/process me rakhna chahiye.
+Created resources:
+
+S3 bucket: banaras-dairy-bills
+IAM policy: BanarasDairyS3Policy
+IAM user: banaras-dairy-app
+IAM access key generated through Terraform
+Policy attached to IAM user
+Next project step:
+
+Terraform resources created ho chuke hain.
+Ab FastAPI backend me S3 credentials configure karne hain.
+PDF bill S3 me upload karna hai.
+Pre-signed URL generate karna hai.
+React frontend me WhatsApp share button add karna hai.

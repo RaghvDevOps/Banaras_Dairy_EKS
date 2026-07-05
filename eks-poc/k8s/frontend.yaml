@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: banaras-frontend
+  labels:
+    app: banaras-frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: banaras-frontend
+  template:
+    metadata:
+      labels:
+        app: banaras-frontend
+    spec:
+      imagePullSecrets:
+        - name: ghcr-secret
+      containers:
+        - name: frontend
+          image: ghcr.io/raghvdevops/banaras_dairy-frontend:latest
+          ports:
+            - containerPort: 80
+          env:
+            # MUST be a real container env var (not just a script-local default) —
+            # docker-entrypoint.sh's own fallback assigns it locally without
+            # `export`, so envsubst (a separate child process) never sees it and
+            # substitutes an empty string, crashing nginx: "server_name ;" has
+            # zero arguments. "_" = nginx catch-all server_name = HTTP-only mode
+            # (correct for us: ALB terminates TLS, not this container).
+            - name: PUBLIC_HOSTNAME
+              value: "_"
+          readinessProbe:
+            tcpSocket:
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "300m"
+              memory: "150Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: banaras-frontend-svc
+spec:
+  selector:
+    app: banaras-frontend
+  ports:
+    - port: 80
+      targetPort: 80
+  type: ClusterIP
