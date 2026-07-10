@@ -1,0 +1,13 @@
+# Copy this file to backend.hcl (gitignored) and fill in your own values,
+# OR just run scripts/bootstrap_backend.sh once -- it prints a ready-to-use
+# backend.hcl for you automatically.
+#
+#   cp backend.hcl.example backend.hcl
+#
+# Then initialize with:
+#   terraform init -backend-config=backend.hcl
+
+resource_group_name = "banaras-tfstate-rg"
+storage_account_name = "banarastfstate<RANDOM>"
+container_name       = "tfstate"
+key                  = "azure-aks-poc/terraform.tfstate"
