@@ -1,9 +1,0 @@
-.terraform/
-.terraform.lock.hcl
-*.tfstate
-*.tfstate.*
-*.tfstate.lock.info
-backend.hcl
-secrets.auto.tfvars
-crash.log
-crash.*.log
