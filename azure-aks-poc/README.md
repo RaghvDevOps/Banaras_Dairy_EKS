@@ -15,6 +15,7 @@ sibling `../eks-poc/` (AWS) project so the two can be compared file-by-file.
 | Identity | 2x User-Assigned Managed Identity + Workload Identity/OIDC federation | IRSA (IAM Roles for Service Accounts) |
 | Secrets | Key Vault (db creds + GHCR creds) + Secrets Store CSI Driver | SSM Parameter Store, pulled by `deploy.sh` |
 | Ingress | Application Gateway + AGIC addon | AWS Load Balancer Controller + ALB |
+| Ops | Jumpbox VM inside `jumpbox-subnet`, own Managed Identity | Bastion host / on-prem management server |
 
 ## Prerequisites
 
@@ -23,14 +24,41 @@ sibling `../eks-poc/` (AWS) project so the two can be compared file-by-file.
 - `Microsoft.KeyVault` and `Microsoft.ContainerService` resource providers registered on the
   subscription (one-time): `az provider register --namespace Microsoft.KeyVault`
 
-## First-time setup
+## First-time setup (run ONCE, from your laptop or Azure Cloud Shell)
+
+The jumpbox VM itself is part of this same Terraform config, so it has to be created by a
+FIRST apply from outside the VNet (chicken-and-egg -- can't SSH into a VM that doesn't exist
+yet). Everything AFTER this one-time bootstrap can run from inside the jumpbox instead.
 
 ```bash
 cd azure-aks-poc
 ./scripts/bootstrap_backend.sh          # creates the remote state storage account (once)
 cp secrets.auto.tfvars.example secrets.auto.tfvars   # fill in real db/GHCR values
-./scripts/deploy.sh                     # terraform apply + full app deploy in one shot
+
+# Get your current public IP, append /32, put it in secrets.auto.tfvars as allowed_ssh_source_ip
+curl ifconfig.me
+
+# Get (or generate) your SSH public key, put its contents in secrets.auto.tfvars as vm_ssh_public_key
+cat ~/.ssh/id_rsa.pub || ssh-keygen -t rsa -b 4096
+
+./scripts/deploy.sh                     # terraform apply (incl. jumpbox) + full app deploy in one shot
+terraform output jumpbox_ssh_command    # -> ssh azureuser@<jumpbox-public-ip>
 ```
+
+## Using the jumpbox for everything afterwards
+
+```bash
+ssh azureuser@<jumpbox-public-ip>       # cloud-init needs ~1-2 min after VM creation to finish installing tools
+az login --identity                     # no password/browser needed -- the VM's own Managed Identity logs you in
+git clone https://github.com/RaghvDevOps/Banaras_Dairy_EKS.git
+cd Banaras_Dairy_EKS/azure-aks-poc
+cp secrets.auto.tfvars.example secrets.auto.tfvars   # fill in the SAME values again (this file is gitignored, never pushed)
+./scripts/deploy.sh                     # re-runs against the SAME remote state -- safe, idempotent
+```
+
+Remember to **stop (deallocate) the jumpbox** when you're not actively using it --
+`az vm deallocate --name banaras-jumpbox --resource-group banaras-azure-poc` -- compute is
+billed hourly while running, unlike the Free-tier AKS control plane.
 
 ## Cleanup
 

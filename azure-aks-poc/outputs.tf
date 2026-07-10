@@ -44,6 +44,14 @@ output "app_gateway_public_ip" {
   value = azurerm_public_ip.appgw.ip_address
 }
 
+output "jumpbox_public_ip" {
+  value = azurerm_public_ip.jumpbox.ip_address
+}
+
+output "jumpbox_ssh_command" {
+  value = "ssh azureuser@${azurerm_public_ip.jumpbox.ip_address}"
+}
+
 output "db_user" {
   value = local.db_user
 }

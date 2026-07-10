@@ -54,3 +54,26 @@ variable "db_password" {
 # they're non-secret constants, defined once as locals in outputs.tf so
 # scripts/deploy.sh (and this config) share a single source of truth,
 # exactly like eks-poc does with its own outputs.tf.
+
+variable "allowed_ssh_source_ip" {
+  description = <<-EOT
+    Your current public IP in CIDR form (e.g. "49.36.XX.XX/32"), used to lock
+    down SSH to the jumpbox VM to ONLY you. Find yours with:
+      curl ifconfig.me
+    then append "/32". No default on purpose -- forces you to set this
+    explicitly in secrets.auto.tfvars rather than accidentally leaving SSH
+    open to the whole internet.
+  EOT
+  type        = string
+}
+
+variable "vm_ssh_public_key" {
+  description = <<-EOT
+    Your SSH PUBLIC key contents (not the private key!), used as the
+    jumpbox VM's login credential (password auth is disabled). Get yours
+    with (PowerShell/bash):
+      cat ~/.ssh/id_rsa.pub
+    or generate a new pair first with: ssh-keygen -t rsa -b 4096
+  EOT
+  type        = string
+}
